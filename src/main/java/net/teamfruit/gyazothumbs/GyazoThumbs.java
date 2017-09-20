@@ -10,9 +10,12 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import javax.xml.ws.http.HTTPException;
+
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.apache.commons.lang3.time.DurationFormatUtils;
+import org.apache.http.HttpStatus;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.utils.URIBuilder;
@@ -108,8 +111,13 @@ public class GyazoThumbs {
 						.addParameter("per_page", "100");
 				final HttpGet get = new HttpGet(builder.build());
 				try (CloseableHttpResponse res = this.client.execute(get)) {
-					final APIResponse api = GyazoThumbs.gson.fromJson(new InputStreamReader(res.getEntity().getContent()), APIResponse.class);
-					this.queue.addAll(api.getImages());
+					if (res.getStatusLine().getStatusCode()==HttpStatus.SC_OK)
+						try (InputStreamReader isr = new InputStreamReader(res.getEntity().getContent())) {
+							final APIResponse api = GyazoThumbs.gson.fromJson(isr, APIResponse.class);
+							this.queue.addAll(api.getImages());
+						}
+					else
+						throw new HTTPException(res.getStatusLine().getStatusCode());
 				}
 			} catch (final Exception e) {
 				throw new RuntimeException(e);
