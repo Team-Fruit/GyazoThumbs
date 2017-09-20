@@ -38,7 +38,7 @@ public class GyazoThumbs {
 	public CloseableHttpClient client = HttpClientBuilder.create().build();
 	public ExecutorService executor;
 	public final Deque<ImageBean> queue = new ArrayDeque<>();
-	public final File dir = new File(ARGS.getDir()).getAbsoluteFile();
+	public File dir;
 
 	private AtomicInteger progress = new AtomicInteger();
 	private APIHeader header;
@@ -46,6 +46,7 @@ public class GyazoThumbs {
 	public void launch() {
 		final BasicThreadFactory factory = new BasicThreadFactory.Builder().namingPattern("GyazoThumbs-download-thread-%d").build();
 		this.executor = Executors.newFixedThreadPool(ARGS.getThreadSize(), factory);
+		this.dir = new File(ARGS.getDir()).getAbsoluteFile();
 		this.dir.mkdirs();
 		Log.LOG.info("GyazoThumbs");
 		Log.LOG.info("Directory: "+this.dir);
@@ -54,7 +55,7 @@ public class GyazoThumbs {
 			final URIBuilder builder = new URIBuilder("https://api.gyazo.com/api/images")
 					.addParameter("access_token", ARGS.getToken())
 					.addParameter("page", String.valueOf(1))
-					.addParameter("per_page", "100");
+					.addParameter("per_page", String.valueOf(ARGS.getMax()<100 ? ARGS.getMax() : 100));
 			final HttpGet get = new HttpGet(builder.build());
 			try (CloseableHttpResponse res = this.client.execute(get)) {
 				this.header = new APIHeader(res);
@@ -64,23 +65,30 @@ public class GyazoThumbs {
 		} catch (final Exception e) {
 			throw new RuntimeException(e);
 		}
+		Log.LOG.info("Total-Count: {}", this.header.getTotalCount());
+		Log.LOG.info("User-Type: {}", this.header.getUserType());
 
 		run();
 	}
 
 	public void run() {
 		final long start = System.currentTimeMillis();
-		int page = 0;
+		int page = 1;
+		int count = 0;
 		loop: while (!this.queue.isEmpty()) {
 			final int remaining = this.header.getTotalCount()-this.progress.get();
 			final CountDownLatch latch = new CountDownLatch(remaining>=100 ? 100 : remaining);
 			ImageBean bean;
 			while ((bean = this.queue.poll())!=null) {
+				if (count>=ARGS.getMax())
+					break loop;
+
 				final String url = StringUtils.substring(bean.getThumbUrl(), 0, 30)+"7680/"+StringUtils.substringAfterLast(bean.getThumbUrl(), "/");
 				final File file = new File(this.dir, StringUtils.substringAfterLast(url, "_"));
-				if (!file.exists())
+				if (!file.exists()) {
 					this.executor.submit(new Downloader(url, file, latch));
-				else {
+					count++;
+				} else {
 					if (ARGS.isNewer())
 						break loop;
 					latch.countDown();
@@ -88,7 +96,7 @@ public class GyazoThumbs {
 				}
 			}
 
-			if (page*100>=this.header.getTotalCount())
+			if (page*100>=this.header.getTotalCount()||count>=ARGS.getMax())
 				break;
 
 			try {
