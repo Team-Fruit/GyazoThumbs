@@ -90,15 +90,10 @@ public class GyazoThumbs {
 
 				final String url = ARGS.isPro() ? bean.getUrl() : StringUtils.substring(bean.getThumbUrl(), 0, 30)+"7680/"+StringUtils.substringAfterLast(bean.getThumbUrl(), "/");
 				final File file = new File(this.dir, StringUtils.substringAfterLast(url, ARGS.isPro() ? "/" : "_"));
-				if (!file.exists()) {
-					this.executor.submit(new Downloader(url, file, latch, bean.getCreatedAt().getTime()));
-					count++;
-				} else {
-					if (ARGS.isNewer())
-						break loop;
-					latch.countDown();
-					Log.LOG.info("Skipped "+GyazoThumbs.instance.getProgress().incrementAndGet()+"/"+GyazoThumbs.instance.getTotal()+": "+file.getName());
-				}
+				if (file.exists()&&ARGS.isNew())
+					break loop;
+				this.executor.submit(new Downloader(url, file, latch, bean.getCreatedAt().getTime()));
+				count++;
 			}
 
 			if (page*100>=this.header.getTotalCount()||count>=ARGS.getMax())

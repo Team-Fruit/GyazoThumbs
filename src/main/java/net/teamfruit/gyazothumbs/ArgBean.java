@@ -17,7 +17,7 @@ public class ArgBean {
 	@Option(name = "-dir", metaVar = "dir", required = false, usage = "Thumbs Dir")
 	private String dir = "thumbs";
 
-	@Option(name = "-newer", metaVar = "newer", required = false, usage = "boolean")
+	@Option(name = "-new", metaVar = "new", required = false, usage = "boolean")
 	private boolean newer = false;
 
 	@Option(name = "-pro", metaVar = "pro", required = false, usage = "boolean")
@@ -39,7 +39,7 @@ public class ArgBean {
 		return this.dir;
 	}
 
-	public boolean isNewer() {
+	public boolean isNew() {
 		return this.newer;
 	}
 
