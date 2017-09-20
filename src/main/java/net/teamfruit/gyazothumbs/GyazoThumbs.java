@@ -65,10 +65,15 @@ public class GyazoThumbs {
 		} catch (final Exception e) {
 			throw new RuntimeException(e);
 		}
-		Log.LOG.info("Total-Count: {}", this.header.getTotalCount());
-		Log.LOG.info("User-Type: {}", this.header.getUserType());
 
-		run();
+		if (ARGS.isPro()&&this.header.getUserType().equals("lite"))
+			Log.LOG.error("Your account is not a pro!");
+		else {
+			Log.LOG.info("Total-Count: {}", this.header.getTotalCount());
+			Log.LOG.info("User-Type: {}", this.header.getUserType());
+
+			run();
+		}
 	}
 
 	public void run() {
@@ -83,8 +88,8 @@ public class GyazoThumbs {
 				if (count>=ARGS.getMax())
 					break loop;
 
-				final String url = StringUtils.substring(bean.getThumbUrl(), 0, 30)+"7680/"+StringUtils.substringAfterLast(bean.getThumbUrl(), "/");
-				final File file = new File(this.dir, StringUtils.substringAfterLast(url, "_"));
+				final String url = ARGS.isPro() ? bean.getUrl() : StringUtils.substring(bean.getThumbUrl(), 0, 30)+"7680/"+StringUtils.substringAfterLast(bean.getThumbUrl(), "/");
+				final File file = new File(this.dir, StringUtils.substringAfterLast(url, ARGS.isPro() ? "/" : "_"));
 				if (!file.exists()) {
 					this.executor.submit(new Downloader(url, file, latch, bean.getCreatedAt().getTime()));
 					count++;

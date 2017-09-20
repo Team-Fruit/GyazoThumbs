@@ -20,6 +20,9 @@ public class ArgBean {
 	@Option(name = "-newer", metaVar = "newer", required = false, usage = "boolean")
 	private boolean newer = false;
 
+	@Option(name = "-pro", metaVar = "pro", required = false, usage = "boolean")
+	private boolean pro = false;
+
 	public String getToken() {
 		return this.token;
 	}
@@ -38,5 +41,9 @@ public class ArgBean {
 
 	public boolean isNewer() {
 		return this.newer;
+	}
+
+	public boolean isPro() {
+		return this.pro;
 	}
 }
