@@ -12,6 +12,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
+import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.utils.URIBuilder;
@@ -40,7 +41,7 @@ public class GyazoThumbs {
 	public final File dir = new File(ARGS.getDir()).getAbsoluteFile();
 
 	private AtomicInteger progress = new AtomicInteger();
-	private int total = 0;
+	private APIHeader header;
 
 	public void launch() {
 		final BasicThreadFactory factory = new BasicThreadFactory.Builder().namingPattern("GyazoThumbs-download-thread-%d").build();
@@ -48,13 +49,31 @@ public class GyazoThumbs {
 		this.dir.mkdirs();
 		Log.LOG.info("GyazoThumbs");
 		Log.LOG.info("Directory: "+this.dir);
+
+		try {
+			final URIBuilder builder = new URIBuilder("https://api.gyazo.com/api/images")
+					.addParameter("access_token", ARGS.getToken())
+					.addParameter("page", String.valueOf(1))
+					.addParameter("per_page", "100");
+			final HttpGet get = new HttpGet(builder.build());
+			try (CloseableHttpResponse res = this.client.execute(get)) {
+				this.header = new APIHeader(res);
+				final APIResponse api = GyazoThumbs.gson.fromJson(new InputStreamReader(res.getEntity().getContent()), APIResponse.class);
+				this.queue.addAll(api.getImages());
+			}
+		} catch (final Exception e) {
+			throw new RuntimeException(e);
+		}
+
 		run();
 	}
 
 	public void run() {
+		final long start = System.currentTimeMillis();
 		int page = 0;
-		while (!this.queue.isEmpty()||this.total==0) {
-			final CountDownLatch latch = new CountDownLatch(this.total-this.progress.get()>=100 ? 100 : this.total-this.progress.get());
+		loop: while (!this.queue.isEmpty()) {
+			final int remaining = this.header.getTotalCount()-this.progress.get();
+			final CountDownLatch latch = new CountDownLatch(remaining>=100 ? 100 : remaining);
 			ImageBean bean;
 			while ((bean = this.queue.poll())!=null) {
 				final String url = StringUtils.substring(bean.getThumbUrl(), 0, 30)+"7680/"+StringUtils.substringAfterLast(bean.getThumbUrl(), "/");
@@ -63,13 +82,15 @@ public class GyazoThumbs {
 					this.executor.submit(new Downloader(url, file, latch));
 				else {
 					if (ARGS.isNewer())
-						end();
+						break loop;
 					latch.countDown();
 					Log.LOG.info("Skipped "+GyazoThumbs.instance.getProgress().incrementAndGet()+"/"+GyazoThumbs.instance.getTotal()+": "+file.getName());
 				}
 			}
-			if (page*100>=this.total&&this.total!=0)
-				end();
+
+			if (page*100>=this.header.getTotalCount())
+				break;
+
 			try {
 				if (page!=0)
 					latch.await();
@@ -79,7 +100,6 @@ public class GyazoThumbs {
 						.addParameter("per_page", "100");
 				final HttpGet get = new HttpGet(builder.build());
 				try (CloseableHttpResponse res = this.client.execute(get)) {
-					this.total = Integer.valueOf(res.getFirstHeader("X-Total-Count").getValue());
 					final APIResponse api = GyazoThumbs.gson.fromJson(new InputStreamReader(res.getEntity().getContent()), APIResponse.class);
 					this.queue.addAll(api.getImages());
 				}
@@ -87,13 +107,12 @@ public class GyazoThumbs {
 				throw new RuntimeException(e);
 			}
 		}
-	}
 
-	private void end() {
 		try {
 			this.executor.shutdown();
 			this.executor.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
 			Log.LOG.info("Download Complete");
+			Log.LOG.info("Total Time: {}", DurationFormatUtils.formatDuration(System.currentTimeMillis()-start, "HH:mm:ss"));
 			System.exit(0);
 		} catch (final InterruptedException e) {
 			Log.LOG.error(e);
@@ -101,7 +120,7 @@ public class GyazoThumbs {
 	}
 
 	public int getTotal() {
-		return this.total;
+		return this.header.getTotalCount();
 	}
 
 	public AtomicInteger getProgress() {
