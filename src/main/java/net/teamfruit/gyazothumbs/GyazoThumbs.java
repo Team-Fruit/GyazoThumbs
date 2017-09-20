@@ -1,11 +1,9 @@
 package net.teamfruit.gyazothumbs;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayDeque;
 import java.util.Deque;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -14,8 +12,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpStatus;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.utils.URIBuilder;
@@ -40,18 +36,18 @@ public class GyazoThumbs {
 
 	public CloseableHttpClient client = HttpClientBuilder.create().build();
 	public ExecutorService executor;
-	public Deque<ImageBean> queue = new ArrayDeque<>();
-	public File file;
-	private int total = 0;
+	public final Deque<ImageBean> queue = new ArrayDeque<>();
+	public final File dir = new File(ARGS.getDir()).getAbsoluteFile();
+
 	private AtomicInteger progress = new AtomicInteger();
+	private int total = 0;
 
 	public void launch() {
 		final BasicThreadFactory factory = new BasicThreadFactory.Builder().namingPattern("GyazoThumbs-download-thread-%d").build();
 		this.executor = Executors.newFixedThreadPool(ARGS.getThreadSize(), factory);
-		this.file = new File(ARGS.getDir()).getAbsoluteFile();
-		this.file.mkdirs();
+		this.dir.mkdirs();
 		Log.LOG.info("GyazoThumbs");
-		Log.LOG.info("Directory: "+this.file);
+		Log.LOG.info("Directory: "+this.dir);
 		run();
 	}
 
@@ -62,7 +58,7 @@ public class GyazoThumbs {
 			ImageBean bean;
 			while ((bean = this.queue.poll())!=null) {
 				final String url = StringUtils.substring(bean.getThumbUrl(), 0, 30)+"7680/"+StringUtils.substringAfterLast(bean.getThumbUrl(), "/");
-				final File file = new File(this.file, StringUtils.substringAfterLast(url, "_"));
+				final File file = new File(this.dir, StringUtils.substringAfterLast(url, "_"));
 				if (!file.exists())
 					this.executor.submit(new Downloader(url, file, latch));
 				else {
@@ -112,40 +108,4 @@ public class GyazoThumbs {
 		return this.progress;
 	}
 
-	public static class Downloader implements Callable<Void> {
-
-		private final String url;
-		private final File file;
-		private final CountDownLatch latch;
-
-		public Downloader(final String url, final File file, final CountDownLatch latch) {
-			this.url = url;
-			this.file = file;
-			this.latch = latch;
-		}
-
-		@Override
-		public Void call() throws Exception {
-			try {
-				Log.LOG.info("Downloading "+GyazoThumbs.instance.getProgress().incrementAndGet()+"/"+GyazoThumbs.instance.getTotal()+": "+this.file.getName());
-				final HttpGet get = new HttpGet(this.url);
-				try (final CloseableHttpResponse res = GyazoThumbs.instance.client.execute(get)) {
-					if (res.getStatusLine().getStatusCode()==HttpStatus.SC_OK) {
-						final HttpEntity entity = res.getEntity();
-						if (entity!=null)
-							try (FileOutputStream fos = new FileOutputStream(this.file)) {
-								entity.writeTo(fos);
-							}
-						else
-							Log.LOG.warn("Download failed: "+this.url);
-					} else
-						Log.LOG.warn("Download failed: "+this.url+" "+res.getStatusLine().getStatusCode());
-				}
-				return null;
-			} finally {
-				this.latch.countDown();
-			}
-		}
-
-	}
 }
