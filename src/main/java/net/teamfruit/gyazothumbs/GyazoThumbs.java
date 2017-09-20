@@ -9,7 +9,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -63,12 +62,18 @@ public class GyazoThumbs {
 			ImageBean bean;
 			while ((bean = this.queue.poll())!=null) {
 				final String url = StringUtils.substring(bean.getThumbUrl(), 0, 30)+"7680/"+StringUtils.substringAfterLast(bean.getThumbUrl(), "/");
-				final Future<Void> future = this.executor.submit(new Downloader(url, new File(this.file, StringUtils.substringAfterLast(url, "_")), latch));
+				final File file = new File(this.file, StringUtils.substringAfterLast(url, "_"));
+				if (!file.exists())
+					this.executor.submit(new Downloader(url, file, latch));
+				else {
+					if (ARGS.isNewer())
+						end();
+					latch.countDown();
+					Log.LOG.info("Skipped "+GyazoThumbs.instance.getProgress().incrementAndGet()+"/"+GyazoThumbs.instance.getTotal()+": "+file.getName());
+				}
 			}
-			if (page*100>=this.total&&this.total!=0) {
+			if (page*100>=this.total&&this.total!=0)
 				end();
-				break;
-			}
 			try {
 				if (page!=0)
 					latch.await();
@@ -92,7 +97,8 @@ public class GyazoThumbs {
 		try {
 			this.executor.shutdown();
 			this.executor.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
-			this.executor.shutdownNow();
+			Log.LOG.info("Download Complete");
+			System.exit(0);
 		} catch (final InterruptedException e) {
 			Log.LOG.error(e);
 		}
@@ -121,23 +127,20 @@ public class GyazoThumbs {
 		@Override
 		public Void call() throws Exception {
 			try {
-				if (!this.file.exists()) {
-					Log.LOG.info("Downloading "+GyazoThumbs.instance.getProgress().incrementAndGet()+"/"+GyazoThumbs.instance.getTotal()+": "+this.file.getName());
-					final HttpGet get = new HttpGet(this.url);
-					try (final CloseableHttpResponse res = GyazoThumbs.instance.client.execute(get)) {
-						if (res.getStatusLine().getStatusCode()==HttpStatus.SC_OK) {
-							final HttpEntity entity = res.getEntity();
-							if (entity!=null)
-								try (FileOutputStream fos = new FileOutputStream(this.file)) {
-									entity.writeTo(fos);
-								}
-							else
-								Log.LOG.warn("Download failed: "+this.url);
-						} else
-							Log.LOG.warn("Download failed: "+this.url+" "+res.getStatusLine().getStatusCode());
-					}
-				} else
-					Log.LOG.info("Skipped "+GyazoThumbs.instance.getProgress().incrementAndGet()+"/"+GyazoThumbs.instance.getTotal()+": "+this.file.getName());
+				Log.LOG.info("Downloading "+GyazoThumbs.instance.getProgress().incrementAndGet()+"/"+GyazoThumbs.instance.getTotal()+": "+this.file.getName());
+				final HttpGet get = new HttpGet(this.url);
+				try (final CloseableHttpResponse res = GyazoThumbs.instance.client.execute(get)) {
+					if (res.getStatusLine().getStatusCode()==HttpStatus.SC_OK) {
+						final HttpEntity entity = res.getEntity();
+						if (entity!=null)
+							try (FileOutputStream fos = new FileOutputStream(this.file)) {
+								entity.writeTo(fos);
+							}
+						else
+							Log.LOG.warn("Download failed: "+this.url);
+					} else
+						Log.LOG.warn("Download failed: "+this.url+" "+res.getStatusLine().getStatusCode());
+				}
 				return null;
 			} finally {
 				this.latch.countDown();

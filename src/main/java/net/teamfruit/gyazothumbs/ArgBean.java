@@ -14,6 +14,9 @@ public class ArgBean {
 	@Option(name = "-dir", metaVar = "dir", required = false, usage = "Thumbs Dir")
 	private String dir = "thumbs";
 
+	@Option(name = "-newer", metaVar = "newer", required = false, usage = "boolean")
+	private boolean newer = false;
+
 	public String getToken() {
 		return this.token;
 	}
@@ -24,5 +27,9 @@ public class ArgBean {
 
 	public String getDir() {
 		return this.dir;
+	}
+
+	public boolean isNewer() {
+		return this.newer;
 	}
 }
