@@ -86,7 +86,7 @@ public class GyazoThumbs {
 				final String url = StringUtils.substring(bean.getThumbUrl(), 0, 30)+"7680/"+StringUtils.substringAfterLast(bean.getThumbUrl(), "/");
 				final File file = new File(this.dir, StringUtils.substringAfterLast(url, "_"));
 				if (!file.exists()) {
-					this.executor.submit(new Downloader(url, file, latch));
+					this.executor.submit(new Downloader(url, file, latch, bean.getCreatedAt().getTime()));
 					count++;
 				} else {
 					if (ARGS.isNewer())

@@ -15,11 +15,13 @@ public class Downloader implements Callable<Void> {
 	private final String url;
 	private final File file;
 	private final CountDownLatch latch;
+	private final long timestamp;
 
-	public Downloader(final String url, final File file, final CountDownLatch latch) {
+	public Downloader(final String url, final File file, final CountDownLatch latch, final long timestamp) {
 		this.url = url;
 		this.file = file;
 		this.latch = latch;
+		this.timestamp = timestamp;
 	}
 
 	@Override
@@ -30,11 +32,12 @@ public class Downloader implements Callable<Void> {
 			try (final CloseableHttpResponse res = GyazoThumbs.instance.client.execute(get)) {
 				if (res.getStatusLine().getStatusCode()==HttpStatus.SC_OK) {
 					final HttpEntity entity = res.getEntity();
-					if (entity!=null)
+					if (entity!=null) {
 						try (FileOutputStream fos = new FileOutputStream(this.file)) {
 							entity.writeTo(fos);
 						}
-					else
+						this.file.setLastModified(this.timestamp);
+					} else
 						Log.LOG.warn("Download failed: "+this.url);
 				} else
 					Log.LOG.warn("Download failed: "+this.url+" "+res.getStatusLine().getStatusCode());
