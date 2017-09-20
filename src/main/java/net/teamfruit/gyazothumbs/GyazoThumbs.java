@@ -59,7 +59,7 @@ public class GyazoThumbs {
 	public void run() {
 		int page = 0;
 		while (!this.queue.isEmpty()||this.total==0) {
-			final CountDownLatch latch = new CountDownLatch(100);
+			final CountDownLatch latch = new CountDownLatch(this.total-this.progress.get()>=100 ? 100 : this.total-this.progress.get());
 			ImageBean bean;
 			while ((bean = this.queue.poll())!=null) {
 				final String url = StringUtils.substring(bean.getThumbUrl(), 0, 30)+"7680/"+StringUtils.substringAfterLast(bean.getThumbUrl(), "/");
