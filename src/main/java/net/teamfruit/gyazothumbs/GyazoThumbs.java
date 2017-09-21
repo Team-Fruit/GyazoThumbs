@@ -10,8 +10,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import javax.xml.ws.http.HTTPException;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.apache.commons.lang3.time.DurationFormatUtils;
@@ -62,8 +60,13 @@ public class GyazoThumbs {
 			final HttpGet get = new HttpGet(builder.build());
 			try (CloseableHttpResponse res = this.client.execute(get)) {
 				this.header = new APIHeader(res);
-				final APIResponse api = GyazoThumbs.gson.fromJson(new InputStreamReader(res.getEntity().getContent()), APIResponse.class);
-				this.queue.addAll(api.getImages());
+				if (res.getStatusLine().getStatusCode()==HttpStatus.SC_OK)
+					try (InputStreamReader isr = new InputStreamReader(res.getEntity().getContent())) {
+						final APIResponse api = GyazoThumbs.gson.fromJson(isr, APIResponse.class);
+						this.queue.addAll(api.getImages());
+					}
+				else
+					throw new RuntimeException(String.format("%s %s", res.getStatusLine().getStatusCode(), res.getStatusLine().getReasonPhrase()));
 			}
 		} catch (final Exception e) {
 			throw new RuntimeException(e);
@@ -117,7 +120,7 @@ public class GyazoThumbs {
 							this.queue.addAll(api.getImages());
 						}
 					else
-						throw new HTTPException(res.getStatusLine().getStatusCode());
+						throw new RuntimeException(String.format("%s %s", res.getStatusLine().getStatusCode(), res.getStatusLine().getReasonPhrase()));
 				}
 			} catch (final Exception e) {
 				throw new RuntimeException(e);
