@@ -88,7 +88,7 @@ public class GyazoThumbs {
 		int count = 0;
 		loop: while (!this.queue.isEmpty()) {
 			final int remaining = this.header.getTotalCount()-this.progress.get();
-			final CountDownLatch latch = new CountDownLatch(remaining>=100 ? 100 : remaining);
+			final CountDownLatch latch = new CountDownLatch(remaining>=90 ? 90 : remaining);
 			ImageBean bean;
 			while ((bean = this.queue.poll())!=null) {
 				if (count>=ARGS.getMax())

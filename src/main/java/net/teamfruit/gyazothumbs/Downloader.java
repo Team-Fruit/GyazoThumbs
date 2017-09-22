@@ -1,7 +1,9 @@
 package net.teamfruit.gyazothumbs;
 
 import java.io.File;
-import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 
@@ -33,9 +35,9 @@ public class Downloader implements Callable<Void> {
 				if (res.getStatusLine().getStatusCode()==HttpStatus.SC_OK) {
 					final HttpEntity entity = res.getEntity();
 					if (entity!=null) {
-						try (FileOutputStream fos = new FileOutputStream(this.file)) {
-							entity.writeTo(fos);
-						}
+						final InputStream is = entity.getContent();
+						Files.copy(is, this.file.toPath(), StandardCopyOption.REPLACE_EXISTING);
+						is.close();
 						this.file.setLastModified(this.timestamp);
 					} else
 						Log.LOG.warn("Download failed: "+this.url);
