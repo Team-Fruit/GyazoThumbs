@@ -102,7 +102,7 @@ public class GyazoThumbs {
 				count++;
 			}
 
-			if (page*100>=this.header.getTotalCount()||count>=ARGS.getMax())
+			if (count>=this.header.getTotalCount()||count>=ARGS.getMax())
 				break;
 
 			try {
@@ -132,7 +132,6 @@ public class GyazoThumbs {
 			this.executor.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
 			Log.LOG.info("Download Complete");
 			Log.LOG.info("Total Time: {}", DurationFormatUtils.formatDuration(System.currentTimeMillis()-start, "HH:mm:ss"));
-			System.exit(0);
 		} catch (final InterruptedException e) {
 			Log.LOG.error(e);
 		}
