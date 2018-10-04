@@ -10,10 +10,10 @@ public class APIHeader {
 	private final String userType;
 
 	public APIHeader(final HttpResponse res) {
-		this.totalCount = Integer.parseInt(res.getFirstHeader("X-Total-Count").getValue());
-		this.currentPage = Integer.parseInt(res.getFirstHeader("X-Current-Page").getValue());
-		this.perPage = Integer.parseInt(res.getFirstHeader("X-Per-Page").getValue());
-		this.userType = res.getFirstHeader("X-User-Type").getValue();
+		this.totalCount = Integer.parseInt(res.getFirstHeader("x-total-count").getValue());
+		this.currentPage = Integer.parseInt(res.getFirstHeader("x-current-page").getValue());
+		this.perPage = Integer.parseInt(res.getFirstHeader("x-per-page").getValue());
+		this.userType = res.getFirstHeader("x-user-type").getValue();
 	}
 
 	public int getTotalCount() {
