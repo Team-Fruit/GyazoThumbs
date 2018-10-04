@@ -32,7 +32,7 @@ $ java -jar gyazothumbs-{Version}.jar {Access Token} 512
 ```
 To download photos to a directory other than thumbs, use the `-dir` option:
 ```
-$ java -jar gyazothumbs-{Version}.jar {Access Token} -dir /path/to/dir
+$ java -jar gyazothumbs-{Version}.jar {Access Token} -dir full/path
 ```
 To change the number of download threads, use the `-thread` option. The default is 4:
 ```
