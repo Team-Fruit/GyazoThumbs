@@ -8,8 +8,8 @@ Simple command-line tool to get thumbs from Gyazo
 ## Installation
 Download the [latest release](https://github.com/Team-Fruit/GyazoThumbs/releases/latest), make a working folder and put jar file.
 
-## How It Works
-The command-line front-end of Gyazo Thumbs, "GyazoThumbs", download thumbnails of all the images stored in Gyazo. All thumbnails will be JPEG (GIF) and the image will be degraded, but **this works even if the account is not Pro.** Also, if your account is Pro, you can also download raw images. You can specify the directory to download, number of photos to get, and whether to download only new photos since last downloads.
+## How It Works (Outdated)
+The command-line front-end of Gyazo Thumbs, "GyazoThumbs", download thumbnails of all the images stored in Gyazo. All thumbnails will be JPEG (GIF) and the image will be degraded, but **~~this works even if the account is not Pro.~~ (NOT WORKING NOW)** Also, if your account is Pro, you can also download raw images. You can specify the directory to download, number of photos to get, and whether to download only new photos since last downloads.
 
 ## Usage
 If you don't have a Gyazo access token, create a new application from [Gyazo Applications](https://gyazo.com/oauth/applications) and generate an access token from the details page. Callback URL can be sloppy.
